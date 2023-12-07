@@ -1,5 +1,8 @@
 [![progress-banner](https://backend.codecrafters.io/progress/sqlite/9146b431-6e2b-46ac-b19f-d5fd89349696)](https://app.codecrafters.io/users/codecrafters-bot?r=2qF)
 
+# Sqlite Rust
+[![ci](https://github.com/ttiimmothy/sqlite-rust/actions/workflows/ci.yml/badge.svg)](https://github.com/ttiimmothy/sqlite-rust/actions/workflows/ci.yml)
+
 This is a starting point for Rust solutions to the
 ["Build Your Own SQLite" Challenge](https://codecrafters.io/challenges/sqlite).
 
@@ -31,10 +34,10 @@ Time to move on to the next stage!
 Note: This section is for stages 2 and beyond.
 
 1. Ensure you have `cargo (1.54)` installed locally
-1. Run `./your_sqlite3.sh` to run your program, which is implemented in
+2. Run `./your_sqlite3.sh` to run your program, which is implemented in
    `src/main.rs`. This command compiles your Rust project, so it might be slow
    the first time you run it. Subsequent runs will be fast.
-1. Commit your changes and run `git push origin master` to submit your solution
+3. Commit your changes and run `git push origin master` to submit your solution
    to CodeCrafters. Test output will be streamed to your terminal.
 
 # Sample Databases
@@ -61,7 +64,7 @@ There are two other databases that you can use:
    - This is a small version of the test database used in the table-scan stage.
    - It contains one table: `superheroes`.
    - It is ~1MB in size.
-1. `companies.db`:
+2. `companies.db`:
    - This is a small version of the test database used in the index-scan stage.
    - It contains one table: `companies`, and one index: `idx_companies_country`
    - It is ~7MB in size.
@@ -76,3 +79,7 @@ download them by running this script:
 If the script doesn't work for some reason, you can download the databases
 directly from
 [codecrafters-io/sample-sqlite-databases](https://github.com/codecrafters-io/sample-sqlite-databases).
+
+## License
+
+Sqlite Rust is licensed under [GNU General Public License v3.0](LICENSE).
