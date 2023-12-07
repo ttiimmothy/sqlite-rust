@@ -11,3 +11,4 @@ target/
 
 *.db
 .DS_Store
+batch/

@@ -9,6 +9,7 @@
     "MSVC",
     "rustc",
     "rustfmt",
-    "varint"
+    "varint",
+    "varints"
   ]
 }
