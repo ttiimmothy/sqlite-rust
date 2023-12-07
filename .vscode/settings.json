@@ -1,3 +1,14 @@
 {
-  "cSpell.words": ["codecrafters", "dbinfo", "MSVC", "rustc", "rustfmt"]
+  "cSpell.words": [
+    "autoincrement",
+    "Celestino",
+    "codecrafters",
+    "dbinfo",
+    "Deque",
+    "itertools",
+    "MSVC",
+    "rustc",
+    "rustfmt",
+    "varint"
+  ]
 }
