@@ -133,7 +133,6 @@ pub struct SelectExpression {
 pub enum SelectClause {
   Columns(Vec<String>),
   FunctionCall { name: String, args: Vec<String> },
-  FunctionCall { name: String, args: Vec<String> },
 }
 
 #[derive(Debug, PartialEq, Clone)]
@@ -146,7 +145,6 @@ pub struct WhereClause {
 #[derive(Debug, PartialEq, Eq, Clone)]
 pub enum WhereValue {
   String(String),
-  Number(String),
   Number(String),
 }
 

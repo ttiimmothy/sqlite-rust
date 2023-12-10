@@ -32,7 +32,6 @@ impl SQLite {
     })
   }
   pub fn page(&mut self, index: usize) -> Result<&Page> {
-    ensure!(index < self.header.db_page_count as usize, "Invalid page index: {}, total pages: {}", index, self.header.db_page_count;
     self.pages[index].load(&mut self.file, &self.header, index)
   }
 }
@@ -303,7 +302,7 @@ impl LeafIndexCell {
       Some(Value::Int(row_id)) => u64::try_from(*row_id)?, _ => return Err(anyhow!("Expected integer row id, but got {:?}", payload)),
     };
     let payload = Record {
-      values: payload.values[..payload.values.len() - 1].to_vec()into_boxed_slice(),
+      values: payload.values[..payload.values.len() - 1].to_vec().into_boxed_slice(),
     };
     Ok(Self {
       row_id,
