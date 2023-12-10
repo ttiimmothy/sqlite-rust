@@ -1,115 +1,78 @@
-use anyhow::{anyhow, Result};
+use nom::IResult;
 
-pub fn read_varint(bytes: &[u8]) -> Result<(u64, &[u8], usize)> {
-  let mut result = 0;
-  let shift = 7;
-  let mut bytes_read = 0;
-  let mut bs = bytes.iter().copied();
-  loop {
-    let byte = bs.next().ok_or_else(|| anyhow!("Unexpected end of bytes"))?;
-    bytes_read += 1;
-    if bytes_read == 9 {
-      result = (result << shift) | u64::from(byte);
-      break;
+pub fn varint(input: &[u8]) -> IResult<&[u8], i64> {
+    let mut i = 0;
+    let mut value: i64 = (input[i] as i64) & 0x7f;
+    while high_bit(input[i]) && i < 8 {
+        i += 1;
+        value = (value << 7) | ((input[i] as i64) & 0x7f);
     }
-    result = (result << shift) | u64::from(byte & 0b0111_1111);
-    if byte & 0b1000_0000 == 0 {
-      break;
-    }
-  }
-  Ok((result, &bytes[bytes_read..], bytes_read))
+    Ok((&input[i + 1..], value))
+}
+
+/// Is the high bit of this byte set?
+fn high_bit(byte: u8) -> bool {
+    (byte & 0xf0) >> 7 == 1
 }
 
 #[cfg(test)]
 mod tests {
-  use super::*;
-  #[test]
-  fn test_one_byte() -> Result<()> {
-    let varint = vec![0b0000_0001, 0b1111_1111];
-    let (n, _, _) = read_varint(&varint)?;
-    assert_eq!(n, 1);
-    Ok(())
-  }
+    use super::{high_bit, varint};
 
-  #[test]
-  fn test_two_byte() -> Result<()> {
-    let varint = vec![0b1000_0001, 0b0111_1111, 0];
-    let (n, _, _) = read_varint(&varint)?;
-    assert_eq!(n, 255);
-    Ok(())
-  }
+    #[test]
+    fn test_high_bit() {
+        assert!(high_bit(0b10000000));
+        assert!(high_bit(0b10111010));
 
-  #[test]
-  fn test_max_varint() -> Result<()> {
-    let varint = vec![
-      0b1000_0001,
-      0b1000_0001,
-      0b1000_0001,
-      0b1000_0001,
-      0b1000_0001,
-      0b1000_0001,
-      0b1000_0001,
-      0b1000_0001,
-      0b0000_0001,
-    ];
-    let (n, _, _) = read_varint(&varint)?;
-    assert_eq!(n, (1u64 << 56)
-      | (1u64 << 49)
-      | (1u64 << 42)
-      | (1u64 << 35)
-      | (1u64 << 28)
-      | (1u64 << 21)
-      | (1u64 << 14)
-      | (1u64 << 7)
-      | 1u64
-    );
-    Ok(())
-  }
+        assert!(!high_bit(0b00000000));
+        assert!(!high_bit(0b01111111));
+    }
 
-  #[test]
-  fn test_incomplete_varint() {
-    let varint = vec![0b1000_0000];
-    assert!(read_varint(&varint).is_err());
-  }
+    #[test]
+    fn one_byte() {
+        let input = &[0x15];
+        let (rest, value) = varint(input).unwrap();
+        assert!(rest.is_empty());
+        assert_eq!(value, 0x15);
+    }
 
-  #[test]
-  fn test_empty_input() {
-    let varint = vec![];
-    assert!(read_varint(&varint).is_err());
-  }
+    #[test]
+    fn two_bytes() {
+        let input = &[0x87, 0x68];
+        let (rest, value) = varint(input).unwrap();
+        assert!(rest.is_empty());
+        assert_eq!(value, 1000);
+    }
 
-  #[test]
-  fn test_multiple_varints() -> Result<()> {
-    let varints = vec![
-      0b0000_0010,
-      0b1000_0010,
-      0b0000_0001,
-      0b1000_0001,
-      0b0000_0001,
-    ];
-    let (n1, rest, _) = read_varint(&varints)?;
-    assert_eq!(n1, 2);
-    let (n2, rest, _) = read_varint(rest)?;
-    assert_eq!(n2, 257);
-    let (n3, _, _) = read_varint(rest)?;
-    assert_eq!(n3, 129);
-    Ok(())
-  }
+    #[test]
+    fn three_bytes() {
+        let input = &[0xc8, 0xf2, 0x19];
+        let (rest, value) = varint(input).unwrap();
+        assert!(rest.is_empty());
+        assert_eq!(value, 1194265);
+    }
 
-  #[test]
-  fn test_varint_with_additional_data() -> Result<()> {
-    let varint_with_data = vec![0b0000_0011, 0xff, 0xee];
-    let (n, rest, _) = read_varint(&varint_with_data)?;
-    assert_eq!(n, 3);
-    assert_eq!(rest, &[0xff, 0xee]);
-    Ok(())
-  }
+    #[test]
+    fn four_bytes() {
+        let input = &[0xd1, 0x9a, 0xe2, 0x67];
+        let (rest, value) = varint(input).unwrap();
+        assert!(rest.is_empty());
+        assert_eq!(value, 170307943);
+    }
 
-  #[test]
-  fn test_largest_single_byte_varint() -> Result<()> {
-    let varint = vec![0b0111_1111];
-    let (n, _, _) = read_varint(&varint)?;
-    assert_eq!(n, 127);
-    Ok(())
-  }
+    #[test]
+    fn nine_bytes() {
+        let input = &[0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff];
+        let (rest, value) = varint(input).unwrap();
+        assert!(rest.is_empty());
+        assert_eq!(value, 9223372036854775807);
+    }
+
+    #[test]
+    fn ten_bytes() {
+        let input = &[0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xab];
+        let (rest, value) = varint(input).unwrap();
+        assert!(rest.len() == 1 && rest[0] == 0xab);
+        assert_eq!(value, 9223372036854775807);
+    }
 }

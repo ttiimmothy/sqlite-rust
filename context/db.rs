@@ -9,7 +9,7 @@ use itertools::Itertools;
 use std::collections::{HashMap, VecDeque};
 use std::fs::File;
 
-pub fn process_sql(file: &str, query: &str) -> Result<String> {
+pub fn process_sql(file: &str, query: &str) {
   let select_expression = sql::parse_select_sql(query)?;
   let filename = file;
   let file = File::open(file)?;
