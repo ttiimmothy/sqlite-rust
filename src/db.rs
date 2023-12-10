@@ -1,7 +1,5 @@
 use crate::sql::{
-  self, parse_create_table_sql, ColumnDefinition, Operator, SelectClause, WhereClause, WhereValue,
-  self, parse_create_index_sql, parse_create_table_sql, ColumnDefinition, CreateTableStatement,
-  Operator, SelectClause, SelectExpression, WhereClause, WhereValue,
+  self, parse_create_index_sql, parse_create_table_sql, ColumnDefinition, CreateTableStatement, Operator, SelectClause, SelectExpression, WhereClause, WhereValue,
 };
 use crate::sqlite::{Cell, PageType, SQLite};
 use crate::sqlite_table::CreateTable;
@@ -16,11 +14,10 @@ pub fn process_sql(file: &str, query: &str) -> Result<String> {
   let filename = file;
   let file = File::open(file)?;
   let mut db = SQLite::new(file)?;
-  let file = File::open(file)?;
   let (table_definition, _, column_name_to_definition) = get_table_info(filename, select_expression.clone())?;
 
   let mut stack = VecDeque::new();
-  stack.push_back((table_definition.root_page, 0, u64::max_value()));
+  stack.push_back((table_definition.root_page, 0, u64::MAX));
   let mut filtered_cells: Vec<Cell> = Vec::new();
   let row_ids = process_indices(filename, select_expression.clone())?;
   let where_clause = select_expression.where_clause;
@@ -33,46 +30,42 @@ pub fn process_sql(file: &str, query: &str) -> Result<String> {
         let mut row_ids = row_ids.clone().map(|ids| {
           ids.into_iter().filter(|id| *id <= max_row_id && *id >= min_row_id).collect_vec()
         });
-          let pages = page.cells.iter()
-          let pages = page
-            .cells
-            .iter()
-            .filter_map(|cell| match cell {
-              Cell::InteriorTable(cell) => match &mut row_ids {
-                Some(row_ids) => {
-                  if row_ids.len() == 0 {
-                    return None;
-                  }
-                  if row_ids.iter().any(|row_id| *row_id <= cell.left_ptr) {
-                    let min_row_id = *row_ids.first().unwrap();
-                    row_ids.retain(|id| *id > cell.left_ptr);
-                    Some((
-                      usize::try_from(cell.child_page).unwrap(),
-                      min_row_id,
-                      cell.left_ptr,
-                    ))
-                  } else {
-                    None
-                  }
-                }
-                None => Some((
+        let pages = page.cells.iter().filter_map(|cell| match cell {
+          Cell::InteriorTable(cell) => match &mut row_ids {
+            Some(row_ids) => {
+              if row_ids.len() == 0 {
+                return None;
+              }
+              if row_ids.iter().any(|row_id| *row_id <= cell.left_ptr) {
+                let min_row_id = *row_ids.first().unwrap();
+                row_ids.retain(|id| *id > cell.left_ptr);
+                Some((
                   usize::try_from(cell.child_page).unwrap(),
                   min_row_id,
-                  max_row_id,
-                )),
-              },
-              Cell::LeafTable(_) => {
-                panic!("Unexpected LeafTable in interior page")
+                  cell.left_ptr,
+                ))
+              } else {
+                None
               }
-              Cell::LeafIndex(_) => {
-                panic!("Unexpected LeafIndex for interior page")
-              }
-              Cell::InteriorIndex(_) => {
-                panic!("Unexpected InteriorIndex for interior page")
-              }
-            })
-            .collect_vec();
-          stack.extend(pages);
+            }
+            None => Some((
+              usize::try_from(cell.child_page).unwrap(),
+              min_row_id,
+              max_row_id,
+            )),
+          },
+          Cell::LeafTable(_) => {
+            panic!("Unexpected LeafTable in interior page")
+          }
+          Cell::LeafIndex(_) => {
+            panic!("Unexpected LeafIndex for interior page")
+          }
+          Cell::InteriorIndex(_) => {
+            panic!("Unexpected InteriorIndex for interior page")
+          }
+        })
+        .collect_vec();
+        stack.extend(pages);
       }
       PageType::InteriorIndex => todo!(),
       PageType::LeafIndex => todo!(),
@@ -89,9 +82,7 @@ pub fn process_sql(file: &str, query: &str) -> Result<String> {
           ref value,
         }) = where_clause
         {
-          let filter_column_index = column_name_to_definition
-            .get(column)
-            .ok_or(anyhow!("Column not found: {}", column))?;
+          let filter_column_index = column_name_to_definition.get(column).ok_or(anyhow!("Column not found: {}", column))?;
           let tmp = page
             .cells
             .clone()
